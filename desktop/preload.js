@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   },
   listLocalMusicLibrary: () => ipcRenderer.invoke('mineradio-local-library-list'),
   readLocalMusicLyric: (localFileId) => ipcRenderer.invoke('mineradio-local-library-lyric', String(localFileId || '')),
+  importLocalMusicLyric: (localFileId, lyricText, source) => ipcRenderer.invoke('mineradio-local-library-import-lyric', { localFileId: String(localFileId || ''), lyric: String(lyricText || ''), source: source || 'manual' }),
   importLocalMusicFiles: async (files) => {
     const entries = [];
     for (const file of Array.from(files || [])) {

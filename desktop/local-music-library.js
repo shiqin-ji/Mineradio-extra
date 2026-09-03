@@ -335,7 +335,7 @@ class LocalMusicLibrary {
           coverPath,
           coverMime: cleanText(source.coverMime, '', 100),
           lyric: cleanText(source.lyric, '', MAX_LYRIC_BYTES),
-          lyricSource: source.lyricSource === 'sidecar' ? 'sidecar' : (source.lyricSource === 'embedded' ? 'embedded' : ''),
+          lyricSource: source.lyricSource === 'sidecar' ? 'sidecar' : (source.lyricSource === 'embedded' ? 'embedded' : (source.lyricSource === 'manual' ? 'manual' : '')),
           importedAt: Math.max(0, Number(source.importedAt) || 0),
         };
         nextRecords.set(id, record);
@@ -399,6 +399,18 @@ class LocalMusicLibrary {
       lyric: record.lyric || '',
       lyricSource: record.lyricSource || '',
     };
+  }
+
+  async importLyricForTrack(trackId, lyricText, source) {
+    const id = cleanText(trackId, '', 64).replace(/^local:/, '').toLowerCase();
+    if (!/^[a-f0-9]{24}$/.test(id)) return { ok: false, error: 'LOCAL_TRACK_INVALID' };
+    const record = this.records.get(id);
+    if (!record) return { ok: false, error: 'LOCAL_TRACK_MISSING', missing: true };
+    const text = String(lyricText || '').slice(0, MAX_LYRIC_BYTES);
+    record.lyric = text;
+    record.lyricSource = source || 'manual';
+    await this.persistSnapshot(this.order, this.records);
+    return { ok: true, localFileId: id, lyric: text, lyricSource: record.lyricSource };
   }
 
   async stageSnapshot(order, records) {

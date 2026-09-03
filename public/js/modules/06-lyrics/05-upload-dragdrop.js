@@ -235,7 +235,7 @@ function toggleUploadPanel(event) {
   else openUploadPanel();
 }
 function triggerUploadInput(kind) {
-  var id = kind === 'cover' ? 'cover-input' : (kind === 'folder' ? 'folder-input' : 'file-input');
+  var id = kind === 'cover' ? 'cover-input' : (kind === 'folder' ? 'folder-input' : (kind === 'lyric' ? 'lyric-input' : 'file-input'));
   var input = document.getElementById(id);
   if (!input) {
     closeUploadPanel();
@@ -283,6 +283,78 @@ function handleCoverFiles(files) {
   loadCoverFromFile(imgFile, null);
   updateCustomCoverButton();
 }
+function isLrcFormat(text) {
+  return /\[\d{1,2}:\d{1,2}([.:]\d{1,3})?\]/.test(text);
+}
+function convertPlainTextToLrc(text, duration) {
+  var lines = String(text || '').split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
+  if (!lines.length) return '';
+  var total = Math.max(1, Number(duration) || 0);
+  if (total < 1) total = 240;
+  return lines.map(function (line, i) {
+    var t = total * i / lines.length;
+    var min = Math.floor(t / 60);
+    var sec = Math.floor(t % 60);
+    var ms = Math.floor((t * 100) % 100);
+    return '[' + String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0') + '.' + String(ms).padStart(2, '0') + ']' + line;
+  }).join('\n');
+}
+async function handleLyricFileSelect(files) {
+  finishUploadFilePicker(true);
+  var file = files && files[0];
+  if (!file) return;
+  var song = currentLocalSong || (currentIdx >= 0 ? playQueue[currentIdx] : null);
+  if (!song || (!song.localFileId && !song.localKey)) {
+    showToast('请先播放本地音乐再导入歌词');
+    return;
+  }
+  var localFileId = song.localFileId || String(song.localKey || '').replace(/^local:/, '');
+  if (!localFileId) {
+    showToast('当前歌曲不是本地导入的音乐');
+    return;
+  }
+  try {
+    var text = await file.text();
+  } catch (e) {
+    showToast('读取歌词文件失败');
+    return;
+  }
+  if (!text || !text.trim()) {
+    showToast('歌词文件为空');
+    return;
+  }
+  var lyricText = isLrcFormat(text) ? text : convertPlainTextToLrc(text, song.duration || (audio ? audio.duration : 0));
+  if (window.desktopWindow && typeof window.desktopWindow.importLocalMusicLyric === 'function') {
+    try {
+      var result = await window.desktopWindow.importLocalMusicLyric(localFileId, lyricText, 'manual');
+      if (result && result.ok) {
+        song.lyric = lyricText;
+        song.lyricSource = 'manual';
+        song.hasLyric = true;
+        if (typeof trackSwitchToken !== 'undefined') {
+          if (typeof applyFetchedLyricResponse === 'function') {
+            applyFetchedLyricResponse(song, trackSwitchToken, { lyric: lyricText }, { persist: false });
+          }
+        }
+        showToast('歌词已导入并关联到当前歌曲');
+      } else {
+        showToast('歌词保存失败：' + (result && result.error || '未知错误'));
+      }
+    } catch (e) {
+      showToast('歌词导入失败：' + (e.message || '未知错误'));
+    }
+  } else {
+    song.lyric = lyricText;
+    song.lyricSource = 'manual';
+    song.hasLyric = true;
+    if (typeof trackSwitchToken !== 'undefined') {
+      if (typeof applyFetchedLyricResponse === 'function') {
+        applyFetchedLyricResponse(song, trackSwitchToken, { lyric: lyricText }, { persist: false });
+      }
+    }
+    showToast('歌词已导入（仅本次会话）');
+  }
+}
 async function handleFiles(files, opts) {
   finishUploadFilePicker(true);
   opts = opts || {};
@@ -325,6 +397,8 @@ var coverInput = document.getElementById('cover-input');
 if (coverInput) coverInput.addEventListener('change', function (e) { handleCoverFiles(e.target.files); e.target.value = ''; });
 var folderInput = document.getElementById('folder-input');
 if (folderInput) folderInput.addEventListener('change', function (e) { handleFiles(e.target.files, { mode: 'folder' }); e.target.value = ''; });
+var lyricInput = document.getElementById('lyric-input');
+if (lyricInput) lyricInput.addEventListener('change', function (e) { handleLyricFileSelect(e.target.files); e.target.value = ''; });
 var lyricFontInput = document.getElementById('lyric-font-input');
 if (lyricFontInput) lyricFontInput.addEventListener('change', function (e) { handleLyricFontFiles(e.target.files); e.target.value = ''; });
 document.addEventListener('click', function (e) {

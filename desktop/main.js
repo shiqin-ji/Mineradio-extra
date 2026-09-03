@@ -4391,6 +4391,18 @@ ipcMain.handle('mineradio-local-library-lyric', async (event, localFileId) => {
   }
 });
 
+ipcMain.handle('mineradio-local-library-import-lyric', async (event, payload = {}) => {
+  if (!isTrustedMainWindowIpc(event)) return { ok: false, error: 'UNTRUSTED_SENDER' };
+  try {
+    const localFileId = String(payload && payload.localFileId || '').trim();
+    const lyricText = String(payload && payload.lyric || '');
+    const source = String(payload && payload.source || 'manual');
+    return await localMusicLibrary.importLyricForTrack(localFileId, lyricText, source);
+  } catch (error) {
+    return { ok: false, error: error.message || 'LOCAL_LYRIC_IMPORT_FAILED' };
+  }
+});
+
 function pruneLocalMusicImportCapabilities() {
   const now = Date.now();
   for (const [token, capability] of localMusicImportCapabilities) {
