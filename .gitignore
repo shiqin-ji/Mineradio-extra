@@ -14,6 +14,8 @@ win-unpacked/
 *.zip
 *.7z
 *.asar
+.electron-builder-cache/
+.npm-cache/
 
 # User data and private state
 .cookie

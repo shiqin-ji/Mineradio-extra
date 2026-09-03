@@ -839,18 +839,13 @@ Function MineradioWelcomeShow
   Pop $0
   SetCtlColors $0 "" "3257F7"
 
-  ${NSD_CreateLabel} 22u 96u 238u 24u "为这台电脑安装 ${PRODUCT_NAME}。默认安装到 D:\${MINERADIO_INSTALL_DIR_NAME}，下一步可以自由选择其它位置。"
+  ${NSD_CreateLabel} 22u 96u 238u 24u "为这台电脑安装 ${PRODUCT_NAME}。下一步可以选择安装位置。"
   Pop $0
   SendMessage $0 ${WM_SETFONT} $MineradioBodyFont 1
   SetCtlColors $0 "4B5263" "FFFFFF"
 
-  ${NSD_CreateLabel} 22u 130u 238u 12u "默认位置：$INSTDIR"
-  Pop $0
-  SendMessage $0 ${WM_SETFONT} $MineradioTitleFont 1
-  SetCtlColors $0 "3257F7" "FFFFFF"
-
   !ifdef MINERADIO_INTERNAL_BETA
-    ${NSD_CreateLabel} 22u 150u 238u 28u "${MINERADIO_INSTALL_NOTICE}"
+    ${NSD_CreateLabel} 22u 130u 238u 28u "${MINERADIO_INSTALL_NOTICE}"
     Pop $0
     SendMessage $0 ${WM_SETFONT} $MineradioSmallFont 1
     SetCtlColors $0 "B42318" "FFFFFF"
@@ -910,11 +905,6 @@ Function MineradioDirectoryShow
   Pop $0
   SendMessage $0 ${WM_SETFONT} $MineradioSmallFont 1
   ${NSD_OnClick} $0 MineradioDirectoryBrowse
-
-  ${NSD_CreateLabel} 22u 122u 238u 12u "默认推荐：D:\${MINERADIO_INSTALL_DIR_NAME}；选盘符会自动建文件夹。"
-  Pop $0
-  SendMessage $0 ${WM_SETFONT} $MineradioSmallFont 1
-  SetCtlColors $0 "6B7280" "FFFFFF"
 
   nsDialogs::Show
 FunctionEnd
