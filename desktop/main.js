@@ -133,12 +133,33 @@ const SPOTIFY_LOGIN_PARTITION = 'persist:mineradio-spotify-login';
 // user-selectable Chromium cache. app.setName() must run before the first
 // derived path lookup or Electron can recompute userData below the cache root.
 app.setName(APP_NAME);
+
+// Detect the install directory by looking for the marker file created by the
+// NSIS installer. When found, userData and cache live inside the install dir
+// so they follow the user-chosen installation path instead of falling back to
+// %APPDATA%\Mineradio and D:\MineradioCache.
+const INSTALL_MARKERS = ['.mineradio-install-root', '.mineradio-beat-install-root'];
+function detectInstallRoot() {
+  if (!app.isPackaged) return null;
+  let dir = path.dirname(process.execPath);
+  for (let i = 0; i < 5; i++) {
+    if (INSTALL_MARKERS.some((m) => fs.existsSync(path.join(dir, m)))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+const INSTALL_ROOT = detectInstallRoot();
+if (INSTALL_ROOT) process.env.MINERADIO_INSTALL_ROOT = INSTALL_ROOT;
+
 const STARTUP_QA_USER_DATA_PATH = (() => {
   const value = String(process.env.MINERADIO_STARTUP_QA_USER_DATA || '').trim();
   if (process.env.MINERADIO_STARTUP_QA_HIDDEN !== '1' || !value || !path.isAbsolute(value)) return '';
   return path.resolve(value);
 })();
-const STABLE_USER_DATA_PATH = STARTUP_QA_USER_DATA_PATH || path.join(app.getPath('appData'), APP_NAME);
+const STABLE_USER_DATA_PATH = STARTUP_QA_USER_DATA_PATH
+  || (INSTALL_ROOT ? path.join(INSTALL_ROOT, 'data') : path.join(app.getPath('appData'), APP_NAME));
 fs.mkdirSync(STABLE_USER_DATA_PATH, { recursive: true });
 app.setPath('userData', STABLE_USER_DATA_PATH);
 const INITIAL_CACHE_SETTINGS = ensureCacheDirectories(readCacheSettings());
@@ -272,6 +293,9 @@ function cacheSettingsConfigPath() {
 }
 
 function defaultCacheRootPath() {
+  if (INSTALL_ROOT) {
+    return path.join(INSTALL_ROOT, 'cache');
+  }
   const dDrive = 'D:\\';
   return fs.existsSync(dDrive)
     ? path.join(dDrive, 'MineradioCache')
