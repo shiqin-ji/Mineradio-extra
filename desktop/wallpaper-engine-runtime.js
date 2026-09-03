@@ -2680,7 +2680,7 @@ class WallpaperEngineRuntime {
     const packageVolume = path.parse(path.resolve(scenePackage)).root.toLowerCase();
     const preferredStageRoot = nativeVolume === packageVolume
       ? path.resolve(this.nativeTempPath, 'wallpaper-engine-scene-stage')
-      : path.resolve(path.parse(scenePackage).root, 'MineradioCache', 'wallpaper-engine-scene-stage');
+      : path.resolve(path.parse(scenePackage).root, 'cache', 'wallpaper-engine-scene-stage');
     let stageRoot = preferredStageRoot;
     try {
       await fs.promises.mkdir(stageRoot, { recursive: true });
