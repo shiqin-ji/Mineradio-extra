@@ -161,6 +161,32 @@ const STARTUP_QA_USER_DATA_PATH = (() => {
 const STABLE_USER_DATA_PATH = STARTUP_QA_USER_DATA_PATH
   || (INSTALL_ROOT ? path.join(INSTALL_ROOT, 'data') : path.join(app.getPath('appData'), APP_NAME));
 fs.mkdirSync(STABLE_USER_DATA_PATH, { recursive: true });
+
+if (INSTALL_ROOT) {
+  const oldUserDataPath = path.join(app.getPath('appData'), APP_NAME);
+  const migrationMarker = path.join(oldUserDataPath, '.migrated-to-install-root');
+  if (oldUserDataPath && fs.existsSync(oldUserDataPath) &&
+      path.resolve(oldUserDataPath) !== path.resolve(STABLE_USER_DATA_PATH) &&
+      !fs.existsSync(migrationMarker)) {
+    try {
+      const entries = fs.readdirSync(oldUserDataPath);
+      for (const entry of entries) {
+        if (entry === '.migrated-to-install-root') continue;
+        const src = path.join(oldUserDataPath, entry);
+        const dst = path.join(STABLE_USER_DATA_PATH, entry);
+        if (fs.existsSync(dst)) continue;
+        const stat = fs.statSync(src);
+        if (stat.isDirectory()) continue;
+        fs.copyFileSync(src, dst);
+      }
+      fs.writeFileSync(migrationMarker, STABLE_USER_DATA_PATH, 'utf8');
+      console.log('[Migration] userData files migrated from', oldUserDataPath, 'to', STABLE_USER_DATA_PATH);
+    } catch (e) {
+      console.warn('[Migration] Old userData migration skipped:', e.message);
+    }
+  }
+}
+
 app.setPath('userData', STABLE_USER_DATA_PATH);
 const INITIAL_CACHE_SETTINGS = ensureCacheDirectories(readCacheSettings());
 const loginEasterEggGate = new LoginEasterEggGate({
